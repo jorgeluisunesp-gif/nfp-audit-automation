@@ -2,6 +2,12 @@
 
 ![Demonstração do Robô em Ação](demo_nfp.gif)
 
+## **📊 Acesso ao Dashboard**
+
+[**Clique aqui para ver o Dashboard Interativo**](https://jorgeluisunesp-gif.github.io/nfp-audit-automation/)
+
+*O dashboard carrega automaticamente dados fictícios de exemplo para demonstração.*
+
 Este projeto é uma ferramenta completa de **ETL (Extract, Transform, Load)** e **Web Scraping** desenvolvida em Python para automatizar a extração, consolidação e análise de dados fiscais do portal da Nota Fiscal Paulista.
 
 ## **🎯 Objetivo**
