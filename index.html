@@ -1,0 +1,417 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Dashboard Fiscal (2020-2026)</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+</head>
+<body class="bg-gray-100 font-sans text-gray-800">
+
+    <!-- Navbar -->
+    <nav class="bg-gradient-to-r from-blue-700 to-blue-900 text-white shadow-xl">
+        <div class="container mx-auto px-6 py-4 flex justify-between items-center">
+            <div class="flex items-center space-x-3">
+                <i class="fas fa-chart-line text-2xl"></i>
+                <div>
+                    <span class="text-xl font-bold block">Controle Fiscal</span>
+                    <span class="text-xs text-blue-200">Análise Consolidada 2020-2026</span>
+                </div>
+            </div>
+            <div>
+                <label for="fileInput" class="cursor-pointer bg-white text-blue-700 hover:bg-blue-50 font-bold py-2 px-6 rounded-full shadow transition duration-300 flex items-center">
+                    <i class="fas fa-upload mr-2"></i> Carregar JSON Unificado
+                </label>
+                <input type="file" id="fileInput" accept=".json" class="hidden">
+            </div>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="container mx-auto px-6 py-8">
+        
+        <!-- Welcome Alert -->
+        <div id="welcomeAlert" class="bg-white border-l-4 border-blue-500 text-gray-700 p-8 rounded-lg shadow-md mb-8 text-center">
+            <i class="fas fa-cloud-upload-alt text-5xl text-blue-300 mb-4"></i>
+            <h2 class="text-2xl font-bold mb-2">Pronto para Analisar</h2>
+            <p class="mb-4">Selecione o arquivo <code>notas_fiscais_unificadas_final.json</code> para gerar o relatório completo.</p>
+        </div>
+
+        <!-- Dashboard Content (Hidden by default) -->
+        <div id="dashboardContent" class="hidden">
+            
+            <!-- KPIs -->
+            <div class="grid grid-cols-1 md:grid-cols-4 gap-6 mb-8">
+                <!-- Total Gasto -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border-b-4 border-green-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium uppercase">Total Gasto</p>
+                            <h3 class="text-3xl font-bold text-gray-800 mt-2" id="totalSpent">R$ 0,00</h3>
+                        </div>
+                        <div class="p-3 bg-green-50 rounded-lg text-green-600">
+                            <i class="fas fa-wallet text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Total Notas -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border-b-4 border-blue-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium uppercase">Notas Processadas</p>
+                            <h3 class="text-3xl font-bold text-gray-800 mt-2" id="totalNotes">0</h3>
+                        </div>
+                        <div class="p-3 bg-blue-50 rounded-lg text-blue-600">
+                            <i class="fas fa-file-invoice text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Média -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border-b-4 border-purple-500">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <p class="text-gray-500 text-sm font-medium uppercase">Ticket Médio</p>
+                            <h3 class="text-3xl font-bold text-gray-800 mt-2" id="averageSpent">R$ 0,00</h3>
+                        </div>
+                        <div class="p-3 bg-purple-50 rounded-lg text-purple-600">
+                            <i class="fas fa-divide text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Top Fornecedor -->
+                <div class="bg-white rounded-xl shadow-sm p-6 border-b-4 border-yellow-500">
+                    <div class="flex justify-between items-start">
+                        <div class="overflow-hidden">
+                            <p class="text-gray-500 text-sm font-medium uppercase">Top Fornecedor</p>
+                            <h3 class="text-lg font-bold text-gray-800 mt-2 truncate" id="topSupplier" title="">-</h3>
+                            <p class="text-xs text-gray-500 mt-1" id="topSupplierValue">R$ 0,00</p>
+                        </div>
+                        <div class="p-3 bg-yellow-50 rounded-lg text-yellow-600">
+                            <i class="fas fa-crown text-xl"></i>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Gráficos -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+                <!-- Evolução Mensal -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-gray-700">Evolução Mensal de Gastos</h3>
+                        <span class="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-500">Linha do Tempo</span>
+                    </div>
+                    <div class="relative h-72">
+                        <canvas id="monthlyChart"></canvas>
+                    </div>
+                </div>
+
+                <!-- Top Fornecedores -->
+                <div class="bg-white rounded-xl shadow-sm p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h3 class="text-lg font-bold text-gray-700">Top 5 Fornecedores (Valor)</h3>
+                        <span class="text-xs font-medium px-2 py-1 bg-gray-100 rounded text-gray-500">Pareto</span>
+                    </div>
+                    <div class="relative h-72 flex justify-center">
+                        <canvas id="supplierChart"></canvas>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Evolução Anual (Novo) -->
+            <div class="bg-white rounded-xl shadow-sm p-6 mb-8">
+                <h3 class="text-lg font-bold text-gray-700 mb-4">Consolidado Anual</h3>
+                <div class="relative h-64">
+                    <canvas id="yearlyChart"></canvas>
+                </div>
+            </div>
+
+            <!-- Tabela de Detalhes -->
+            <div class="bg-white rounded-xl shadow-sm overflow-hidden border border-gray-100">
+                <div class="p-6 border-b border-gray-100 flex flex-col md:flex-row justify-between items-center gap-4">
+                    <h3 class="text-lg font-bold text-gray-700">Registo Detalhado</h3>
+                    
+                    <div class="flex gap-2 w-full md:w-auto">
+                        <div class="relative w-full md:w-64">
+                            <input type="text" id="searchInput" placeholder="Filtrar por loja, valor ou ano..." 
+                                class="w-full pl-10 pr-4 py-2 border border-gray-200 rounded-lg text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent">
+                            <i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-100">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Data</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Fornecedor</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Tipo</th>
+                                <th class="px-6 py-3 text-left text-xs font-semibold text-gray-500 uppercase tracking-wider">Número</th>
+                                <th class="px-6 py-3 text-right text-xs font-semibold text-gray-500 uppercase tracking-wider">Valor</th>
+                                <th class="px-6 py-3 text-center text-xs font-semibold text-gray-500 uppercase tracking-wider">Status</th>
+                            </tr>
+                        </thead>
+                        <tbody class="bg-white divide-y divide-gray-100" id="notesTableBody">
+                            <!-- JS vai preencher -->
+                        </tbody>
+                    </table>
+                </div>
+                
+                <div class="p-4 bg-gray-50 border-t border-gray-100 flex justify-between items-center text-sm text-gray-500">
+                    <span id="tableShowing">Mostrando 0 de 0</span>
+                    <div class="flex gap-2">
+                        <button id="prevPage" class="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50">Anterior</button>
+                        <button id="nextPage" class="px-3 py-1 bg-white border rounded hover:bg-gray-50 disabled:opacity-50">Próximo</button>
+                    </div>
+                </div>
+            </div>
+
+        </div>
+    </div>
+
+    <script>
+        // --- Variáveis Globais ---
+        let allData = [];
+        let filteredData = [];
+        let currentPage = 1;
+        const itemsPerPage = 50;
+        
+        let charts = {}; // Armazena instâncias dos gráficos
+
+        // --- Utilitários ---
+        const formatCurrency = (value) => new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value);
+        
+        const parseValue = (valStr) => {
+            if (!valStr) return 0;
+            if (typeof valStr === 'number') return valStr;
+            // Remove R$, espaços e converte vírgula decimal
+            return parseFloat(valStr.replace(/[^\d,.-]/g, '').replace(',', '.'));
+        };
+
+        const parseDate = (dateStr) => {
+            if (!dateStr) return null;
+            // Tenta converter DD/MM/YYYY
+            const parts = dateStr.split('/');
+            if (parts.length === 3) return new Date(parts[2], parts[1] - 1, parts[0]);
+            // Se for MM/YYYY
+            if (parts.length === 2) return new Date(parts[1], parts[0] - 1, 1);
+            return null;
+        };
+
+        // --- Core ---
+        document.getElementById('fileInput').addEventListener('change', function(e) {
+            const file = e.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    allData = JSON.parse(e.target.result);
+                    
+                    // Ordena por data (mais recente primeiro)
+                    allData.sort((a, b) => {
+                        const dateA = parseDate(a.data_emissao || a.mes_ano_chave) || new Date(0);
+                        const dateB = parseDate(b.data_emissao || b.mes_ano_chave) || new Date(0);
+                        return dateB - dateA;
+                    });
+
+                    filteredData = [...allData];
+                    
+                    document.getElementById('welcomeAlert').classList.add('hidden');
+                    document.getElementById('dashboardContent').classList.remove('hidden');
+                    
+                    updateDashboard();
+                } catch (err) {
+                    alert('Erro ao ler JSON: ' + err.message);
+                }
+            };
+            reader.readAsText(file);
+        });
+
+        document.getElementById('searchInput').addEventListener('input', (e) => {
+            const term = e.target.value.toLowerCase();
+            filteredData = allData.filter(item => {
+                const emitente = (item.emitente_nome || "").toLowerCase();
+                const valor = (item.valor_total || "").toString();
+                const data = (item.data_emissao || item.mes_ano_chave || "").toString();
+                
+                return emitente.includes(term) || valor.includes(term) || data.includes(term);
+            });
+            currentPage = 1;
+            updateTable();
+        });
+
+        // --- Paginação ---
+        document.getElementById('prevPage').addEventListener('click', () => {
+            if (currentPage > 1) { currentPage--; updateTable(); }
+        });
+        document.getElementById('nextPage').addEventListener('click', () => {
+            const maxPage = Math.ceil(filteredData.length / itemsPerPage);
+            if (currentPage < maxPage) { currentPage++; updateTable(); }
+        });
+
+        // --- Atualização ---
+        function updateDashboard() {
+            updateKPIs();
+            updateCharts();
+            updateTable();
+        }
+
+        function updateKPIs() {
+            let total = 0;
+            let suppliers = {};
+
+            filteredData.forEach(item => {
+                const val = parseValue(item.valor_total);
+                total += val;
+                
+                const name = item.emitente_nome || "Não Identificado";
+                suppliers[name] = (suppliers[name] || 0) + val;
+            });
+
+            document.getElementById('totalSpent').innerText = formatCurrency(total);
+            document.getElementById('totalNotes').innerText = filteredData.length;
+            document.getElementById('averageSpent').innerText = formatCurrency(filteredData.length ? total / filteredData.length : 0);
+
+            // Top Supplier
+            const topName = Object.keys(suppliers).reduce((a, b) => suppliers[a] > suppliers[b] ? a : b, "-");
+            document.getElementById('topSupplier').innerText = topName;
+            document.getElementById('topSupplier').title = topName;
+            document.getElementById('topSupplierValue').innerText = formatCurrency(suppliers[topName] || 0);
+        }
+
+        function updateCharts() {
+            // Prepara dados agregados
+            const monthlyData = {};
+            const yearlyData = {};
+            const suppliersData = {};
+
+            filteredData.forEach(item => {
+                const val = parseValue(item.valor_total);
+                const date = parseDate(item.data_emissao || item.mes_ano_chave);
+                
+                if (date) {
+                    // Chave Mês: "YYYY-MM" para ordenação fácil
+                    const mKey = `${date.getFullYear()}-${String(date.getMonth()+1).padStart(2, '0')}`;
+                    monthlyData[mKey] = (monthlyData[mKey] || 0) + val;
+
+                    const yKey = date.getFullYear();
+                    yearlyData[yKey] = (yearlyData[yKey] || 0) + val;
+                }
+
+                const name = item.emitente_nome || "Outros";
+                suppliersData[name] = (suppliersData[name] || 0) + val;
+            });
+
+            // 1. Mensal
+            const sortedMonths = Object.keys(monthlyData).sort();
+            createChart('monthlyChart', 'line', {
+                labels: sortedMonths.map(m => {
+                    const [y, mo] = m.split('-');
+                    return `${mo}/${y}`;
+                }),
+                datasets: [{
+                    label: 'Gastos (R$)',
+                    data: sortedMonths.map(m => monthlyData[m]),
+                    borderColor: '#3B82F6',
+                    backgroundColor: 'rgba(59, 130, 246, 0.1)',
+                    tension: 0.3,
+                    fill: true
+                }]
+            });
+
+            // 2. Fornecedores (Top 5)
+            const sortedSuppliers = Object.entries(suppliersData)
+                .sort(([,a], [,b]) => b - a)
+                .slice(0, 5);
+            
+            createChart('supplierChart', 'doughnut', {
+                labels: sortedSuppliers.map(([n]) => n.length > 20 ? n.substring(0,20)+'...' : n),
+                datasets: [{
+                    data: sortedSuppliers.map(([,v]) => v),
+                    backgroundColor: ['#10B981', '#3B82F6', '#F59E0B', '#8B5CF6', '#EC4899']
+                }]
+            });
+
+            // 3. Anual
+            const sortedYears = Object.keys(yearlyData).sort();
+            createChart('yearlyChart', 'bar', {
+                labels: sortedYears,
+                datasets: [{
+                    label: 'Total Anual',
+                    data: sortedYears.map(y => yearlyData[y]),
+                    backgroundColor: '#6366F1',
+                    borderRadius: 6
+                }]
+            });
+        }
+
+        function createChart(canvasId, type, data) {
+            const ctx = document.getElementById(canvasId).getContext('2d');
+            if (charts[canvasId]) charts[canvasId].destroy();
+            
+            charts[canvasId] = new Chart(ctx, {
+                type: type,
+                data: data,
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { position: 'bottom' }
+                    },
+                    scales: type !== 'doughnut' ? {
+                        y: { beginAtZero: true, grid: { borderDash: [2, 4] } },
+                        x: { grid: { display: false } }
+                    } : {}
+                }
+            });
+        }
+
+        function updateTable() {
+            const tbody = document.getElementById('notesTableBody');
+            tbody.innerHTML = '';
+
+            const start = (currentPage - 1) * itemsPerPage;
+            const end = start + itemsPerPage;
+            const pageData = filteredData.slice(start, end);
+
+            pageData.forEach(item => {
+                const tr = document.createElement('tr');
+                tr.className = "hover:bg-gray-50 transition-colors";
+                
+                const modelo = (item.modelo_descricao || item.modelo_codigo || "").split(' ')[0];
+                const statusClass = item.status_match?.includes('COMPLETO') 
+                    ? 'bg-green-100 text-green-800' 
+                    : 'bg-yellow-100 text-yellow-800';
+                
+                const statusText = item.status_match?.includes('COMPLETO') ? 'Completo' : 'Parcial';
+
+                tr.innerHTML = `
+                    <td class="px-6 py-4 text-sm text-gray-600 whitespace-nowrap">${item.data_emissao || item.mes_ano_chave}</td>
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900 truncate max-w-xs" title="${item.emitente_nome}">${item.emitente_nome || "-"}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500">${modelo}</td>
+                    <td class="px-6 py-4 text-sm text-gray-500 font-mono">${item.numero_nota}</td>
+                    <td class="px-6 py-4 text-sm text-right font-bold text-gray-900">R$ ${item.valor_total}</td>
+                    <td class="px-6 py-4 text-center">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">${statusText}</span>
+                    </td>
+                `;
+                tbody.appendChild(tr);
+            });
+
+            // Update footer
+            document.getElementById('tableShowing').innerText = 
+                `Mostrando ${start + 1} a ${Math.min(end, filteredData.length)} de ${filteredData.length}`;
+            
+            document.getElementById('prevPage').disabled = currentPage === 1;
+            document.getElementById('nextPage').disabled = end >= filteredData.length;
+        }
+    </script>
+</body>
+</html>
